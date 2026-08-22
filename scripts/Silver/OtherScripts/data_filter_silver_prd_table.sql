@@ -1,0 +1,83 @@
+--SELECTING catagory id that is not in another table 
+SELECT 
+	prd_id,
+	prd_key,
+	REPLACE(SUBSTRING(prd_key, 1, 5), '-', '_') AS cat_id,   -- dividig prd_key into two part category id and other AND replacing - with _ to match with another table
+	prd_nm,
+	prd_cost,
+	prd_line,
+	prd_start_dt,
+	prd_end_dt
+FROM bronze.crm_prd_info
+WHERE REPLACE(SUBSTRING(prd_key, 1, 5), '-', '_') NOT IN
+-- selecting catagory idem from another table bronze.erp_px_cat_g1v2
+(SELECT DISTINCT id FROM bronze.erp_px_cat_g1v2)
+
+--Doing the same for the another part product key where lot of product don't have any orders
+SELECT 
+	prd_id,
+	prd_key,
+	REPLACE(SUBSTRING(prd_key, 1, 5), '-', '_') AS cat_id,   -- dividig prd_key into two part category id and other AND replacing - with _ to match with another table
+	SUBSTRING(prd_key, 7, LEN(prd_key)) AS prd_key,
+	prd_nm,
+	prd_cost,
+	prd_line,
+	prd_start_dt,
+	prd_end_dt
+FROM bronze.crm_prd_info
+WHERE SUBSTRING(prd_key, 7, LEN(prd_key)) NOT IN (
+SELECT sls_prd_key FROM bronze.crm_sales_details) 
+
+--Doing the same for the another part product cost replacing null with 0
+SELECT 
+	prd_id,
+	prd_key,
+	REPLACE(SUBSTRING(prd_key, 1, 5), '-', '_') AS cat_id,   -- dividig prd_key into two part category id and other AND replacing - with _ to match with another table
+	SUBSTRING(prd_key, 7, LEN(prd_key)) AS prd_key,
+	prd_nm,
+	ISNULL(prd_cost, 0) AS prd_cost,
+	prd_line,
+	prd_start_dt,
+	prd_end_dt
+FROM bronze.crm_prd_info
+WHERE SUBSTRING(prd_key, 7, LEN(prd_key)) NOT IN (
+SELECT sls_prd_key FROM bronze.crm_sales_details) 
+
+--doing the same to standeraize prd_line colum wit full description
+SELECT 
+	prd_id,
+	prd_key,
+	REPLACE(SUBSTRING(prd_key, 1, 5), '-', '_') AS cat_id,   -- dividig prd_key into two part category id and other AND replacing - with _ to match with another table
+	SUBSTRING(prd_key, 7, LEN(prd_key)) AS prd_key,
+	prd_nm,
+	ISNULL(prd_cost, 0) AS prd_cost,
+	CASE UPPER(TRIM(prd_line))
+		 WHEN 'M' THEN 'Mountain'
+		 WHEN 'R' THEN 'Road'
+		 WHEN 'S' THEN 'Other Sales'
+		 WHEN 'T' THEN 'Touring'
+		 ELSE 'n/a'
+	END AS prd_line,
+	prd_start_dt,
+	prd_end_dt
+FROM bronze.crm_prd_info
+
+--doing the same to check invalid date on  prd_start_date colum wit valid date AND removing unwanted time by using cast
+SELECT 
+	prd_id,
+	prd_key,
+	REPLACE(SUBSTRING(prd_key, 1, 5), '-', '_') AS cat_id,   -- dividig prd_key into two part category id and other AND replacing - with _ to match with another table
+	SUBSTRING(prd_key, 7, LEN(prd_key)) AS prd_key,
+	prd_nm,
+	ISNULL(prd_cost, 0) AS prd_cost,
+	CASE UPPER(TRIM(prd_line))
+		 WHEN 'M' THEN 'Mountain'
+		 WHEN 'R' THEN 'Road'
+		 WHEN 'S' THEN 'Other Sales'
+		 WHEN 'T' THEN 'Touring'
+		 ELSE 'n/a'
+	END AS prd_line,
+	CAST(prd_start_dt AS DATE) AS prd_start_dt,
+	CAST(LEAD(prd_start_dt) OVER (PARTITION BY prd_key ORDER BY prd_start_dt)-1 AS DATE) AS prd_end_dt
+FROM bronze.crm_prd_info
+
